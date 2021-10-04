@@ -1,0 +1,500 @@
+---
+title: "Vigilância Genômica - DF"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(data.table)
+library(tidyverse)
+library(pdftools)
+library(leaflet)
+library(plotly)
+setwd("D:/Cievs/Dashboard")
+
+#SEMANA 1#
+
+#Lê o PDF da primeira semana de setembro
+texto_bruto_1 <- pdf_text("SEI_GDF_1.pdf") %>%
+  strsplit("\n") %>%
+  unlist() %>%
+  enframe(name = NULL, value = "Linha")
+
+#Limpa os dados do PDF 1
+texto_limpo_1 <- texto_bruto_1 %>%
+  tail(-55) %>% 
+  head(-100)
+
+texto_final_limpo_1 <- texto_limpo_1 %>% 
+  slice(1, 7, 9, 11, 13, 17, 19, 21, 23, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45,
+        47, 49, 51, 53, 55, 57, 59, 61, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84,
+        86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116,
+        118, 120, 125, 127, 129, 131, 133, 137, 139, 141, 143, 145, 147, 149, 
+        151, 153, 155, 157, 159, 161, 163, 165, 167, 169, 171, 173, 175, 177,
+        179, 184, 186, 188, 190, 192, 194)
+
+#Separa as variáveis do PDF 1
+base_pdf_1 <- texto_final_limpo_1 %>%
+  separate(Linha, c("Vazio", "Id", "Amostra","SES", 
+                    "Coleta_dia", "Coleta_mes", "Coleta_ano", 
+                    "DN_dia", "DN_mes", "DN_ano", 
+                    "DL_dia", "DL_mes", "DL_ano",
+                    "Resultado", "Plataforma"))
+
+##excluir a Coluna "Vazio"
+base_pdf_1$Vazio <- NULL
+
+#Arrumar as variaveis de datas
+base1 <- base_pdf_1 %>%
+  mutate(Coleta=paste(Coleta_dia, Coleta_mes, Coleta_ano, sep = "/"),
+         Data_Nascimento=paste(DN_dia,DN_mes,DN_ano, sep = "/"),
+         Data_liberacao=paste(DL_dia, DL_mes, DL_ano, sep = "/"))
+base1 <- base1 %>%
+  mutate(Coleta = as.Date(Coleta, "%d/%m/%Y"),
+         Data_Nascimento = as.Date(Data_Nascimento, "%d/%m/%Y"),
+         Data_liberacao = as.Date(Data_liberacao, "%d/%m/%Y"))
+
+#Criar faixa etaria
+data_hj <- "29/09/2021"
+base1 <- cbind(base1, data_hj)
+base1 <- base1 %>%
+  mutate(data_hj = as.Date(data_hj, "%d/%m/%Y")) %>%
+  mutate(idade_dias = difftime(data_hj, Data_Nascimento)) %>%
+  mutate(idade = idade_dias/365) %>%
+  mutate(idade_certo = as.integer(idade))
+
+base1 <- base1 %>%
+  mutate(faixa=ifelse(idade_certo<2, "Menor de 2 anos", NA),
+         faixa=ifelse(idade_certo>=2&idade_certo<=10, "2 a 10", faixa),
+         faixa=ifelse(idade_certo>=11&idade_certo<=19, "11 a 19", faixa),
+         faixa=ifelse(idade_certo>=20&idade_certo<=29, "20 a 29", faixa),
+         faixa=ifelse(idade_certo>=30&idade_certo<=39, "30 a 39", faixa),
+         faixa=ifelse(idade_certo>=40&idade_certo<=49, "40 a 49", faixa),
+         faixa=ifelse(idade_certo>=50&idade_certo<=59, "50 a 59", faixa),
+         faixa=ifelse(idade_certo>=60&idade_certo<=69, "60 a 69", faixa),
+         faixa=ifelse(idade_certo>=70&idade_certo<=79, "70 a 79", faixa),
+         faixa=ifelse(idade_certo>=80, "80 ou mais", faixa))
+
+semana1 <- select(base1, Amostra, Resultado, Coleta, Data_Nascimento, 
+                  idade_certo, faixa)
+
+#Limpa o espaco de trabalho
+rm(base_pdf_1, base1, texto_bruto_1, texto_final_limpo_1, texto_limpo_1, data_hj)
+
+
+#SEMANA 2#
+
+#LÃª o PDF 
+texto_bruto_2 <- pdf_text("SEI_GDF_2.pdf") %>%
+  strsplit("\n") %>%
+  unlist() %>%
+  enframe(name = NULL, value = "Linha")
+
+#Limpa os dados
+texto_limpo_2 <- texto_bruto_2 %>%
+  tail(-51) %>% 
+  head(-76)
+
+texto_final_limpo_2 <- texto_limpo_2 %>% 
+  slice(1, 3, 5, 7, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40,
+        42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 75, 77, 79,
+        81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103, 105, 107, 109, 111,
+        113, 115, 117, 119, 121, 123, 125, 127, 129, 131, 133, 138, 140, 142,
+        144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 166, 168, 170,
+        172, 174, 176, 178, 180, 182, 184, 186, 188, 190, 192, 194, 196, 201,
+        203, 205, 207, 209, 211, 213, 215, 217, 219, 221, 223, 225, 227, 229,
+        231, 233, 235, 237, 239, 241, 243)
+
+#Separa as variÃ¡veis 
+base_pdf_2 <- texto_final_limpo_2 %>%
+  separate(Linha, c("Vazio", "Id", "Amostra","SES", 
+                    "Coleta_dia", "Coleta_mes", "Coleta_ano", 
+                    "DN_dia", "DN_mes", "DN_ano", 
+                    "Resultado", "Plataforma"))
+
+##excluir a Coluna "Vazio"
+base_pdf_2$Vazio <- NULL
+
+#Arrumar as variaveis de datas
+base2 <- base_pdf_2 %>%
+  mutate(Coleta=paste(Coleta_dia, Coleta_mes, Coleta_ano, sep = "/"),
+         Data_Nascimento=paste(DN_dia,DN_mes,DN_ano, sep = "/"))
+
+base2 <- base2 %>%
+  mutate(Coleta = as.Date(Coleta, "%d/%m/%Y"),
+         Data_Nascimento = as.Date(Data_Nascimento, "%d/%m/%Y"))
+
+#Criar faixa etaria
+data_hj <- "29/09/2021"
+base2 <- cbind(base2, data_hj)
+base2 <- base2 %>%
+  mutate(data_hj = as.Date(data_hj, "%d/%m/%Y")) %>%
+  mutate(idade_dias = difftime(data_hj, Data_Nascimento)) %>%
+  mutate(idade = idade_dias/365) %>%
+  mutate(idade_certo = as.integer(idade))
+
+base2 <- base2 %>%
+  mutate(faixa=ifelse(idade_certo<2, "Menor de 2 anos", NA),
+         faixa=ifelse(idade_certo>=2&idade_certo<=10, "2 a 10", faixa),
+         faixa=ifelse(idade_certo>=11&idade_certo<=19, "11 a 19", faixa),
+         faixa=ifelse(idade_certo>=20&idade_certo<=29, "20 a 29", faixa),
+         faixa=ifelse(idade_certo>=30&idade_certo<=39, "30 a 39", faixa),
+         faixa=ifelse(idade_certo>=40&idade_certo<=49, "40 a 49", faixa),
+         faixa=ifelse(idade_certo>=50&idade_certo<=59, "50 a 59", faixa),
+         faixa=ifelse(idade_certo>=60&idade_certo<=69, "60 a 69", faixa),
+         faixa=ifelse(idade_certo>=70&idade_certo<=79, "70 a 79", faixa),
+         faixa=ifelse(idade_certo>=80, "80 ou mais", faixa))
+
+semana2 <- select(base2, Amostra, Resultado, Coleta, Data_Nascimento, 
+                  idade_certo, faixa)
+
+#Limpa o espaco de trabalho
+rm(base_pdf_2, base2, texto_bruto_2, texto_final_limpo_2, texto_limpo_2, data_hj)
+
+
+#SEMANA 3#
+
+#LÃª o PDF 
+texto_bruto_3 <- pdf_text("SEI_GDF_3.pdf") %>%
+  strsplit("\n") %>%
+  unlist() %>%
+  enframe(name = NULL, value = "Linha")
+
+#Limpa os dados
+texto_limpo_3 <- texto_bruto_3 %>%
+  tail(-46) %>% 
+  head(-61)
+
+texto_final_limpo_3 <- texto_limpo_3 %>% 
+  slice(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 35, 37, 39,
+        44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78,
+        80, 82, 87, 89)
+
+#Separa as variÃ¡veis 
+base_pdf_3 <- texto_final_limpo_3 %>%
+  separate(Linha, c("Vazio", "Id", "Amostra","SES", 
+                    "Coleta_dia", "Coleta_mes", "Coleta_ano", 
+                    "DN_dia", "DN_mes", "DN_ano", 
+                    "Resultado"))
+
+#excluir a Coluna "Vazio"
+base_pdf_3$Vazio <- NULL
+
+#Arrumar as variaveis de datas
+base3 <- base_pdf_3 %>%
+  mutate(Coleta=paste(Coleta_dia, Coleta_mes, Coleta_ano, sep = "/"),
+         Data_Nascimento=paste(DN_dia,DN_mes,DN_ano, sep = "/"))
+
+base3 <- base3 %>%
+  mutate(Coleta = as.Date(Coleta, "%d/%m/%Y"),
+         Data_Nascimento = as.Date(Data_Nascimento, "%d/%m/%Y"))
+
+#Criar faixa etaria
+data_hj <- "29/09/2021"
+base3 <- cbind(base3, data_hj)
+base3 <- base3 %>%
+  mutate(data_hj = as.Date(data_hj, "%d/%m/%Y")) %>%
+  mutate(idade_dias = difftime(data_hj, Data_Nascimento)) %>%
+  mutate(idade = idade_dias/365) %>%
+  mutate(idade_certo = as.integer(idade))
+
+base3 <- base3 %>%
+  mutate(faixa=ifelse(idade_certo<2, "Menor de 2 anos", NA),
+         faixa=ifelse(idade_certo>=2&idade_certo<=10, "2 a 10", faixa),
+         faixa=ifelse(idade_certo>=11&idade_certo<=19, "11 a 19", faixa),
+         faixa=ifelse(idade_certo>=20&idade_certo<=29, "20 a 29", faixa),
+         faixa=ifelse(idade_certo>=30&idade_certo<=39, "30 a 39", faixa),
+         faixa=ifelse(idade_certo>=40&idade_certo<=49, "40 a 49", faixa),
+         faixa=ifelse(idade_certo>=50&idade_certo<=59, "50 a 59", faixa),
+         faixa=ifelse(idade_certo>=60&idade_certo<=69, "60 a 69", faixa),
+         faixa=ifelse(idade_certo>=70&idade_certo<=79, "70 a 79", faixa),
+         faixa=ifelse(idade_certo>=80, "80 ou mais", faixa))
+
+semana3 <- select(base3, Amostra, Resultado, Coleta, 
+                  Data_Nascimento, idade_certo, faixa)
+
+#Limpa o espaco de trabalho
+rm(base_pdf_3, base3, texto_bruto_3, texto_final_limpo_3, texto_limpo_3, data_hj)
+
+
+#SEMANA 4#
+
+#LÃª o PDF 
+texto_bruto_4 <- pdf_text("SEI_GDF_4.pdf") %>%
+  strsplit("\n") %>%
+  unlist() %>%
+  enframe(name = NULL, value = "Linha")
+
+#Limpa os dados
+texto_limpo_4 <- texto_bruto_4 %>%
+  tail(-59) %>% 
+  head(-82)
+
+texto_final_limpo_4 <- texto_limpo_4 %>% 
+  slice(1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37,
+        39, 41, 43, 45, 47, 49, 51, 53, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75,
+        77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 99, 101, 103, 105, 107, 109,
+        113, 115, 117, 119, 121, 123, 125, 127, 129, 131, 133, 135, 137, 139,
+        141, 143, 145, 147, 149, 151, 153, 155, 157, 159, 161, 163, 165, 169, 
+        171, 173, 175, 188, 190, 192, 194, 196, 198, 200, 202, 204, 206, 208,
+        210, 212, 214, 216, 218, 220, 222, 228, 230, 232, 234, 236, 238, 240, 
+        242, 244, 246, 248, 250, 252, 254, 256, 258, 260, 262, 264, 268, 270, 
+        272)
+
+#Separa as variÃ¡veis 
+base_pdf_4 <- texto_final_limpo_4 %>%
+  separate(Linha, c("Vazio", "Id", "Amostra","SES", 
+                    "Coleta_dia", "Coleta_mes", "Coleta_ano", 
+                    "DN_dia", "DN_mes", "DN_ano", 
+                    "Resultado", "Plataforma"))
+
+#excluir a Coluna "Vazio"
+base_pdf_4$Vazio <- NULL
+
+#Arrumar as variaveis de datas
+base4 <- base_pdf_4 %>%
+  mutate(ano_DN = as.numeric(DN_ano)) %>%
+  mutate(ano_DN = ifelse(ano_DN<22, ano_DN+2000, ano_DN+1900))
+
+base4 <- base4 %>%
+  mutate(ano_col = as.numeric(Coleta_ano)) %>%
+  mutate(ano_col = ifelse(ano_col<22, ano_col+2000, ano_col+1900))
+
+base4 <- base4 %>%
+  mutate(Coleta=paste(Coleta_dia, Coleta_mes, ano_col, sep = "/"),
+         Data_Nascimento=paste(DN_dia,DN_mes,ano_DN, sep = "/"))
+
+base4 <- base4 %>%
+  mutate(Coleta = as.Date(Coleta, "%d/%m/%Y"),
+         Data_Nascimento = as.Date(Data_Nascimento, "%d/%m/%Y"))
+
+#Criar faixa etaria
+data_hj <- "29/09/2021"
+base4 <- cbind(base4, data_hj)
+base4 <- base4 %>%
+  mutate(data_hj = as.Date(data_hj, "%d/%m/%Y")) %>%
+  mutate(idade_dias = difftime(data_hj, Data_Nascimento)) %>%
+  mutate(idade = idade_dias/365) %>%
+  mutate(idade_certo = as.integer(idade))
+
+base4 <- base4 %>%
+  mutate(faixa=ifelse(idade_certo<2, "Menor de 2 anos", NA),
+         faixa=ifelse(idade_certo>=2&idade_certo<=10, "2 a 10", faixa),
+         faixa=ifelse(idade_certo>=11&idade_certo<=19, "11 a 19", faixa),
+         faixa=ifelse(idade_certo>=20&idade_certo<=29, "20 a 29", faixa),
+         faixa=ifelse(idade_certo>=30&idade_certo<=39, "30 a 39", faixa),
+         faixa=ifelse(idade_certo>=40&idade_certo<=49, "40 a 49", faixa),
+         faixa=ifelse(idade_certo>=50&idade_certo<=59, "50 a 59", faixa),
+         faixa=ifelse(idade_certo>=60&idade_certo<=69, "60 a 69", faixa),
+         faixa=ifelse(idade_certo>=70&idade_certo<=79, "70 a 79", faixa),
+         faixa=ifelse(idade_certo>=80, "80 ou mais", faixa))
+
+semana4 <- select(base4, Amostra, Resultado, Coleta, 
+                  Data_Nascimento, idade_certo, faixa)
+
+#Limpa o espaco de trabalho
+rm(base_pdf_4, base4, texto_bruto_4, texto_final_limpo_4, texto_limpo_4, data_hj)
+
+#Juntando as bases
+base_dash <- rbind(semana1, semana2, semana3, semana4)
+
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Casos correspondentes à variante Delta
+
+```{r}
+base_dash <- base_dash %>%
+  mutate(Resultado = toupper(Resultado))
+
+total_delta <- base_dash %>%
+  filter(Resultado=="DELTA") %>%
+  summarise(n = n())
+
+valueBox(total_delta, icon = 'fa-user')
+
+```
+
+### Novos casos sequenciados entre 01/09/2021 e 10/09/2021
+
+```{r}
+total_semana <- base_dash %>%
+  filter(Coleta>="2021-09-01"&Coleta<="2021-09-10") %>%
+  summarise(n = n())
+
+valueBox(total_semana, icon = 'fa-user')
+
+```
+
+### Casos de Delta por Região Administrativa
+
+```{r}
+#Insere as latitudes e longitudes das RA's no R
+AGUAS <- c("AGUAS CLARAS", -15.8477, -48.0295)
+ARNIQUEIRA <- c("ARNIQUEIRA", -15.8594, -48.0124)
+BRAZ <- c("BRAZLANDIA", -15.6812, -48.1942)
+CEILANDIA <- c("CEILANDIA", -15.8213, -48.1047)
+PSUL <- c("P-SUL", -15.81722, -48.10417)
+MNORT <- c("M NORTE", -15.81722, -48.10417)
+CEIN <- c("CEILANDIA NORTE", -15.81722, -48.10417)
+CEIS <- c("CEILANDIA SUL (CEILANDIA)", -15.81722, -48.10417)
+BSB <- c("BRASILIA", -15.79396, -47.88262)
+TAGUA <- c("TAGUATINGA", -15.83343, -48.05638)
+TAGUAN <- c("TAGUATINGA NORTE", -15.83343, -48.05638)
+GUARA <- c("GUARA", -15.82313, -47.97513)
+SAMS <- c("SAMAMBAIA SUL", -15.87754, -48.088)
+ASAN <- c("ASA NORTE", -15.7627, -47.88401)
+VARJ <- c("VARJAO", -15.71198, -47.87546)
+PARA <- c("PARANOA", -15.77589, -47.77981)
+EMAS <- c("RECANTODAS EMAS", -15.9039, -48.0603)
+PLANAL <- c("PLANALTINA", -15.6223, -47.6594)
+JRORIZ <- c("JARDIM RORIZ", -15.6223, -47.6594)
+CRUZ <- c("CRUZEIRO", -15.79107, -47.9374)
+CRUZN <- c("CRUZEIRO NOVO", -15.79107, -47.9374)
+CRUZV <- c("CRUZEIRO VELHO", -15.79107, -47.9374)
+VICP <- c("VICENTE PIRES", -15.81422, -48.01546)
+GAMA <- c("GAMA", -16.01787, -48.06513)
+UBS <- c("UBS 07 GAMA", -16.01787, -48.06513)
+GCEN <- c("SETOR CENTRAL (GAMA)", -16.01787, -48.06513)
+GSUL <- c("GAMA SUL", -16.01787, -48.06513)
+GOES <- c("GAMA OESTE", -16.01787, -48.06513)
+GLES <- c("SETOR LESTE (GAMA)", -16.01787, -48.06513)
+SOBRAL <- c("SOBRADINHO", -15.6513, -47.785)
+ITAP <- c("ITAPOA", -15.74882, -47.76965)
+SSEB <- c("SAO SEBASTIAO", -15.90485, -47.77025)
+MORRO <- c("MORRO DA CRUZ", -15.90485, -47.77025)
+BOSQUE <- c("RESIDENCIAL DO BOSQUE", -15.90485, -47.77025)
+VILA <- c("VILA DO BOA", -15.90485, -47.77025)
+RESID <- c("RESIDENCIAL OESTE", -15.90485, -47.77025)
+ESTRU <- c("ESTRUTURAL", -15.7798, -47.99285)
+OCTO <- c("OCTOGONAL", -15.80046, -47.92432)
+RIAC1 <- c("RIACHO FUNDO 1", -15.88377, -48.0173)
+RIAC2 <- c("RIACHO FUNDO II", -15.90749, -48.04871)
+
+#Transforma os vetores em um banco de dados
+lista_coord <- list(AGUAS, ARNIQUEIRA, ASAN, BOSQUE, BRAZ, BSB, CEIN, CEIS, CRUZ,
+                    CRUZN, CRUZV, EMAS, ESTRU, GAMA, GCEN, GLES, GOES, GSUL, 
+                    GUARA, ITAP, JRORIZ, MNORT, MORRO, OCTO, PARA, PLANAL, PSUL,
+                    RESID, RIAC1, RIAC2, SAMS, SOBRAL, SSEB, TAGUA, TAGUAN, UBS,
+                    VARJ, VICP, VILA, CEILANDIA)
+
+coord_df <- as.data.frame(lista_coord)
+coord_final <- as.data.frame(t(coord_df))
+coord_final <- coord_final %>%
+  rename(teste_ra=V1,
+         lat = V2,
+         lng = V3)
+
+#puxa os dados 
+testes_mil <- read.csv("tabela_teste.csv")
+testes_mil <- testes_mil %>%
+  tail(-1) %>%
+  head(-1)
+testes_mil <- testes_mil %>%
+  rename(teste_ra = X) %>%
+  rename(total = V1)
+
+teste_df <- left_join(testes_mil, coord_final, by = "teste_ra")
+
+teste_df <- teste_df %>%
+  mutate(longitude = as.numeric(lng))
+teste_df <- teste_df %>%
+  mutate(latitude = as.numeric(lat))
+
+teste_df$lat <- NULL
+teste_df$lng <- NULL  
+  
+teste_df <- mutate_at(teste_df, c("longitude", "latitude"),
+                        ~replace(., is.na(.), 0))  
+  
+  
+m <- leaflet(teste_df) %>% setView(lng = -47.9773, lat = -15.8953, zoom = 12)
+m %>% addTiles() %>%
+  addCircleMarkers(
+    radius = teste_df$total,
+    fillOpacity = 0.5, stroke = F,
+    popup = paste0("<b>RA: </b>", teste_df$teste_ra, "<br>",
+                   "<b>Casos: </b>", teste_df$total),
+    label = ~teste_ra
+  )
+
+
+```
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Evolução das amostras confirmadas de Delta por data de coleta
+
+```{r}
+casos_diarios <- base_dash %>%
+  filter(Resultado=="DELTA") %>%
+  group_by(Coleta) %>%
+  summarise(n = n())
+
+g1 <- ggplot(casos_diarios, aes(x=Coleta, y=n)) + 
+  geom_line(color = "steelblue", size = 1) +
+  geom_point(color = "steelblue", size = 3) +
+  xlab("Data de Coleta") +
+  ylab("Número de casos")
+
+ggplotly(g1)
+
+```
+
+### Dominância da variante Delta
+
+```{r}
+base_dash <- base_dash %>%
+  mutate(Resultado = toupper(Resultado))
+
+data1 <- c("08/08/2021")
+data2 <- c("14/08/2021")
+data3 <- c("15/08/2021")
+data4 <- c("21/08/2021")
+data5 <- c("22/08/2021")
+data6 <- c("28/08/2021")
+data7 <- c("29/08/2021")
+data8 <- c("04/09/2021")
+data9 <- c("05/09/2021")
+data10 <- c("11/09/2021")
+
+data1 <- as.Date(data1, "%d/%m/%Y")
+data2 <- as.Date(data2, "%d/%m/%Y")
+data3 <- as.Date(data3, "%d/%m/%Y")
+data4 <- as.Date(data4, "%d/%m/%Y")
+data5 <- as.Date(data5, "%d/%m/%Y")
+data6 <- as.Date(data6, "%d/%m/%Y")
+data7 <- as.Date(data7, "%d/%m/%Y")
+data8 <- as.Date(data8, "%d/%m/%Y")
+data9 <- as.Date(data9, "%d/%m/%Y")
+data10 <- as.Date(data10, "%d/%m/%Y")
+
+base_dash <- base_dash %>%
+  mutate(sem_epid = ifelse(Coleta>=data1&Coleta<=data2, "Semana 32", Coleta)) %>%
+  mutate(sem_epid = ifelse(Coleta>=data3&Coleta<=data4, "Semana 33", sem_epid)) %>%
+  mutate(sem_epid = ifelse(Coleta>=data5&Coleta<=data6, "Semana 34", sem_epid)) %>%
+  mutate(sem_epid = ifelse(Coleta>=data7&Coleta<=data8, "Semana 35", sem_epid)) %>%
+  mutate(sem_epid = ifelse(Coleta>=data9&Coleta<=data10, "Semana 36", sem_epid))
+
+base_dash <- base_dash[c(-331,-332, -370),]
+
+g2 <- base_dash %>%
+  group_by(sem_epid, Resultado) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x=sem_epid, y=n, fill = Resultado)) +
+  geom_col(width = 0.7) +
+  scale_fill_brewer(palette = "Paired") +
+  xlab("Semana Epidemiológica") +
+  ylab("Número de Amostras sequenciadas")
+
+ggplotly(g2)
+
+```
+
